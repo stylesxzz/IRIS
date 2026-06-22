@@ -55,11 +55,9 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 
 ## 📸 Screenshots
 
-> *(adicione screenshots da sua instância aqui)*
-
 | Login | Dashboard | Mapa Mental |
 |-------|-----------|-------------|
-| ![login](assets/login.png) | ![dashboard](assets/dashboard.png) | ![mapa](assets/mindmap.png) |
+| ![login](Screenshot_20260620_030210_Chrome.jpg) | ![dashboard](Screenshot_20260615_225725_Samsung Browser.jpg) | ![mapa](Screenshot_20260621_121310_Chrome.jpg) |
 
 ---
 
