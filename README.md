@@ -68,7 +68,6 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
  | 
 
 ![Mapa](Screenshot_20260621_121310_Chrome.jpg)
-
  |
 ---
 
