@@ -1,5 +1,8 @@
+Aqui está o código completo para copiar e colar:
+
+```
 <p align="center">
-  <img src="Screenshot_20260615_182251_Samsung Browser.jpg" alt="IRIS Banner" width="100%">
+  <img src="static/iris_banner.png" alt="IRIS Banner" width="100%">
 </p>
 
 <h1 align="center">IRIS — Intelligence & Recon Investigation Suite</h1>
@@ -26,7 +29,6 @@
 - [Screenshots](#-screenshots)
 - [Instalação](#️-instalação)
 - [Configuração](#-configuração)
-- [Uso](#-uso)
 - [Segurança](#-segurança)
 - [Aviso Legal](#️-aviso-legal)
 
@@ -55,24 +57,12 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 
 ## 📸 Screenshots
 
-**Login**
+<p align="center">
+  <img src="Screenshot_20260620_030210_Chrome.jpg" alt="Login" width="30%">
+  <img src="Screenshot_20260615_225725_Samsung Browser.jpg" alt="Menu" width="30%">
+  <img src="Screenshot_20260621_121310_Chrome.jpg" alt="Mapa Mental" width="30%">
+</p>
 
-
-![Login](Screenshot_20260620_030210_Chrome.jpg)
-
-
-
-**Menu**
-
-
-![Menu](Screenshot_20260615_225725_Samsung%20Browser.jpg)
-
-
-
-**Mapa Mental**
-
-
-![Mapa](Screenshot_20260621_121310_Chrome.jpg)
 ---
 
 ## 🛠️ Instalação
@@ -85,18 +75,10 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 ### Instalação rápida
 
 ```bash
-# 1. Clonar o repositório
-git clone https://github.com/SEU_USUARIO/IRIS.git
+git clone https://github.com/stylesxzz/IRIS.git
 cd IRIS
-
-# 2. Instalar dependências Python
 pip install -r requirements.txt
-
-# 3. Configurar variáveis de ambiente
 cp .env.example .env
-nano .env   # preencha SECRET_KEY e as APIs que quiser usar
-
-# 4. Iniciar a plataforma
 python3 app.py
 ```
 
@@ -114,8 +96,6 @@ python3 app.py
 
 ## ⚙️ Configuração
 
-Copie `.env.example` para `.env` e preencha:
-
 | Variável | Obrigatório | Descrição |
 |----------|-------------|-----------|
 | `SECRET_KEY` | ✅ | Chave de criptografia da sessão Flask |
@@ -130,16 +110,14 @@ Copie `.env.example` para `.env` e preencha:
 
 ## 🔒 Segurança
 
-A IRIS implementa as seguintes proteções por padrão:
-
-- **Argon2id** para hash de senhas (com fallback PBKDF2-SHA256)
-- **CSRF tokens** em todas as requisições POST via `secureFetch()`
+- **Argon2id** para hash de senhas
+- **CSRF tokens** em todas as requisições POST
 - **Rate limiting + lockout** após 5 tentativas de login falhas
 - **Whitelist de ferramentas** — apenas binários cadastrados podem ser executados
-- **Sanitização de argumentos** via `shlex` + filtro de injeção de shell
+- **Sanitização de argumentos** via `shlex`
 - **Session fixation fix** — ID de sessão regenerado após login
 - **Headers HTTP**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- **Audit log estruturado** em JSON Lines (`~/.iris/iris_audit.jsonl`)
+- **Audit log estruturado** em JSON Lines
 
 ---
 
@@ -147,12 +125,11 @@ A IRIS implementa as seguintes proteções por padrão:
 
 Esta ferramenta foi desenvolvida **exclusivamente para uso profissional legítimo**: auditorias de segurança autorizadas, pesquisa acadêmica, CTFs e treinamento em cibersegurança.
 
-**O uso da IRIS para escanear, auditar ou atacar sistemas sem autorização prévia e por escrito do proprietário é ilegal** e pode resultar em sanções criminais e civis.
-
-A responsabilidade pelo uso desta plataforma é inteiramente do operador. O desenvolvedor não se responsabiliza por danos causados pelo mau uso.
+**O uso da IRIS para escanear, auditar ou atacar sistemas sem autorização é ilegal.**
 
 ---
 
 <p align="center">
   Desenvolvido com ❤️ para a comunidade de cibersegurança
 </p>
+```
