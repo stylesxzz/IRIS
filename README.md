@@ -55,7 +55,7 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 
 ## 📸 Screenshots
 
-|| Login | Menu | Mapa Mental |
+| Login | Menu | Mapa Mental |
 |-------|------|-------------|
 | 
 
@@ -68,6 +68,7 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
  | 
 
 ![Mapa](Screenshot_20260621_121310_Chrome.jpg)
+
  |
 ---
 
