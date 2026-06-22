@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/iris_banner.png" alt="IRIS Banner" width="100%">
+  <img src="Screenshot_20260620_030210_Chrome.jpg" alt="IRIS Banner" width="100%">
 </p>
 
 <h1 align="center">IRIS — Intelligence & Recon Investigation Suite</h1>
@@ -56,7 +56,7 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 
 <p align="center">
   <img src="Screenshot_20260620_030210_Chrome.jpg" alt="Login" width="30%">
-  <img src="Screenshot_20260615_225725_Samsung Browser.jpg" alt="Menu" width="30%">
+  <img src="Screenshot_20260615_225725_Samsung%20Browser.jpg" alt="Menu" width="30%">
   <img src="Screenshot_20260621_121310_Chrome.jpg" alt="Mapa Mental" width="30%">
 </p>
 
