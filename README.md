@@ -1,6 +1,3 @@
-Aqui está o código completo para copiar e colar:
-
-```
 <p align="center">
   <img src="static/iris_banner.png" alt="IRIS Banner" width="100%">
 </p>
