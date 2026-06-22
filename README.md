@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/iris_banner.png" alt="IRIS Banner" width="100%">
+  <img src="Screenshot_20260615_182251_Samsung Browser.jpg" alt="IRIS Banner" width="100%">
 </p>
 
 <h1 align="center">IRIS — Intelligence & Recon Investigation Suite</h1>
