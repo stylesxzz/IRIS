@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log do Sistema{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Auditoria</p>
+    <h1>Log do Sistema</h1>
+    <p class="lead">Histórico de operações registradas em <code>~/.iris/iris.log</code>.</p>
+</section>
+
+<section class="card terminal-panel terminal-panel-log">
+    <pre class="terminal-output">{{ log_content }}</pre>
+</section>
+{% endblock %}

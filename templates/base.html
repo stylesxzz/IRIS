@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}IRIS{% endblock %} · IRIS Web</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+    // ── secureFetch: wrapper de fetch que injeta CSRF token automaticamente ──
+    // Usar em vez de fetch() diretamente em toda requisição POST/PUT/DELETE
+    // que modifica estado no servidor.
+    const _CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    async function secureFetch(url, options={}) {
+        const method = (options.method || 'GET').toUpperCase();
+        if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+            options.headers = options.headers || {};
+            options.headers['X-CSRF-Token'] = _CSRF_TOKEN;
+        }
+        return fetch(url, options);
+    }
+    </script>
+</head>
+<body>
+    <div class="noise"></div>
+
+    <header class="topbar">
+        <a class="brand" href="/">
+            <span class="brand-mark"></span>
+            <span class="brand-text">IRIS</span>
+        </a>
+        <nav class="topnav">
+            <a href="/" class="{{ 'active' if active == 'home' else '' }}">Início</a>
+            <a href="/menu" class="{{ 'active' if active == 'menu' else '' }}">Menu</a>
+            <a href="/tool_status" class="{{ 'active' if active == 'status' else '' }}">Status</a>
+            <a href="/view_log" class="{{ 'active' if active == 'log' else '' }}">Log</a>
+            <a href="/agent" class="{{ 'active' if active == 'agent' else '' }}">Agente IA</a>
+        </nav>
+        <div style="display:flex;gap:12px;align-items:center;">
+            <span id="topbar-credits" style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--text-muted);"></span>
+            <a href="/plans" class="btn btn-outline btn-sm">Planos</a>
+            <button class="btn btn-primary btn-sm" onclick="logout()">Sair</button>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Abrir menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <nav class="mobile-nav" id="mobile-nav">
+        <a href="/" class="{{ 'active' if active == 'home' else '' }}">Início</a>
+        <a href="/menu" class="{{ 'active' if active == 'menu' else '' }}">Menu</a>
+        <a href="/tool_status" class="{{ 'active' if active == 'status' else '' }}">Status</a>
+        <a href="/view_log" class="{{ 'active' if active == 'log' else '' }}">Log</a>
+        <a href="/agent" class="{{ 'active' if active == 'agent' else '' }}">Agente IA</a>
+    </nav>
+
+    <main class="page">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <span>IRIS Web v3.3</span>
+        <span class="dim">Intelligent Recon &amp; Intrusion System</span>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+    
+    <script>
+    // Atualiza créditos na barra superior
+    async function updateTopbarCredits() {
+        try {
+            const res = await fetch('/credits/balance');
+            const data = await res.json();
+            if (data.success) {
+                const el = document.getElementById('topbar-credits');
+                el.textContent = `${data.balance} créditos`;
+            }
+        } catch (e) {}
+    }
+    
+    async function logout() {
+        if (confirm('Tem certeza que deseja sair?')) {
+            try {
+                await secureFetch('/auth/logout', {method: 'POST'});
+                window.location.href = '/login';
+            } catch (e) {
+                alert('Erro ao fazer logout');
+            }
+        }
+    }
+
+    function toggleMobileMenu() {
+        document.getElementById('mobile-nav').classList.toggle('open');
+        document.querySelector('.mobile-menu-btn').classList.toggle('open');
+    }
+
+    // Fecha o menu mobile ao clicar em um link
+    document.querySelectorAll('.mobile-nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            document.getElementById('mobile-nav').classList.remove('open');
+            document.querySelector('.mobile-menu-btn').classList.remove('open');
+        });
+    });
+    
+    updateTopbarCredits();
+    setInterval(updateTopbarCredits, 30000);
+    </script>
+</body>
+</html>

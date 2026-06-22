@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Planos e Preços{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow"><span class="brand-mark" style="width:8px;height:8px;"></span> Planos e Preços</p>
+    <h1>Escolha seu plano</h1>
+    <p class="lead">Acesso ilimitado ao IRIS Agent com créditos renovados mensalmente.</p>
+</section>
+
+<style>
+    .plans-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 24px;
+        margin: 40px 0;
+    }
+    
+    .plan-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px 24px;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .plan-card:hover {
+        border-color: rgba(255, 64, 35, 0.3);
+        box-shadow: 0 12px 40px rgba(255, 64, 35, 0.1);
+        transform: translateY(-4px);
+    }
+    
+    .plan-card.featured {
+        border-color: rgba(255, 64, 35, 0.5);
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.05), rgba(255, 100, 50, 0.02));
+    }
+    
+    .plan-card.featured::before {
+        content: 'MAIS POPULAR';
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.9), rgba(255, 100, 50, 0.9));
+        color: white;
+        padding: 4px 16px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    
+    .plan-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0 0 8px;
+    }
+    
+    .plan-price {
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: rgba(255, 64, 35, 0.9);
+        margin: 16px 0 4px;
+    }
+    
+    .plan-price span {
+        font-size: 1rem;
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+    
+    .plan-billing {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 24px;
+    }
+    
+    .plan-features {
+        flex: 1;
+        margin-bottom: 24px;
+    }
+    
+    .plan-features ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .plan-features li {
+        padding: 10px 0;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        border-bottom: 1px solid var(--border-soft);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .plan-features li:last-child {
+        border-bottom: none;
+    }
+    
+    .plan-features li::before {
+        content: '✓';
+        color: rgba(100, 200, 100, 0.8);
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    
+    .plan-cta {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.2), rgba(255, 100, 50, 0.15));
+        border: 1px solid rgba(255, 64, 35, 0.3);
+        border-radius: var(--radius-sm);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .plan-cta:hover {
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.3), rgba(255, 100, 50, 0.25));
+        border-color: rgba(255, 64, 35, 0.5);
+    }
+    
+    .plan-card.featured .plan-cta {
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.9), rgba(255, 100, 50, 0.9));
+        border-color: rgba(255, 64, 35, 0.5);
+        color: white;
+    }
+    
+    .plan-card.featured .plan-cta:hover {
+        background: linear-gradient(135deg, rgba(255, 64, 35, 1), rgba(255, 100, 50, 1));
+        box-shadow: 0 8px 24px rgba(255, 64, 35, 0.25);
+    }
+    
+    .plan-cta:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .current-plan {
+        background: rgba(100, 200, 100, 0.1);
+        border: 1px solid rgba(100, 200, 100, 0.3);
+        color: rgba(100, 200, 100, 0.8);
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        margin-top: 12px;
+    }
+    
+    .credits-info {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        margin: 40px 0;
+    }
+    
+    .credits-info h3 {
+        margin: 0 0 16px;
+        color: var(--text);
+    }
+    
+    .credits-info p {
+        color: var(--text-muted);
+        line-height: 1.6;
+        margin: 0 0 12px;
+    }
+    
+    .credits-info p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .credits-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+    }
+    
+    .credits-table th,
+    .credits-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    
+    .credits-table th {
+        background: rgba(255, 64, 35, 0.05);
+        color: var(--text);
+        font-weight: 600;
+    }
+    
+    .credits-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .free-plan-notice {
+        background: rgba(100, 150, 200, 0.1);
+        border: 1px solid rgba(100, 150, 200, 0.3);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin: 40px 0;
+        color: var(--text-muted);
+    }
+    
+    .free-plan-notice strong {
+        color: var(--text);
+    }
+</style>
+
+<!-- Aviso de plano gratuito -->
+<div class="free-plan-notice">
+    <strong>🎁 Plano Gratuito:</strong> Todos os novos usuários começam com <strong>500 créditos</strong> por mês. Cada consulta ao agente consome <strong>5 créditos</strong>. Quando acabarem, você pode renovar com um plano pago.
+</div>
+
+<!-- Grid de planos -->
+<div class="plans-grid">
+    <!-- Plano Mensal -->
+    <div class="plan-card">
+        <h2 class="plan-name">Mensal</h2>
+        <div class="plan-price">R$ 29<span>,90</span></div>
+        <p class="plan-billing">renovado a cada mês</p>
+        
+        <div class="plan-features">
+            <ul>
+                <li>500 créditos por mês</li>
+                <li>Renovação automática</li>
+                <li>Suporte por email</li>
+                <li>Histórico ilimitado</li>
+                <li>Acesso ao agente Mistral</li>
+            </ul>
+        </div>
+        
+        <button class="plan-cta" onclick="selectPlan('monthly')" id="btn-monthly">
+            Escolher plano
+        </button>
+        <div id="current-monthly" class="current-plan" style="display:none;">
+            Seu plano atual
+        </div>
+    </div>
+    
+    <!-- Plano Anual (Mais Popular) -->
+    <div class="plan-card featured">
+        <h2 class="plan-name">Anual</h2>
+        <div class="plan-price">R$ 299<span>,90</span></div>
+        <p class="plan-billing">12 meses de acesso</p>
+        
+        <div class="plan-features">
+            <ul>
+                <li>6.000 créditos por ano</li>
+                <li>Sem renovação automática</li>
+                <li>Suporte prioritário</li>
+                <li>Histórico ilimitado</li>
+                <li>Acesso ao agente Mistral</li>
+                <li><strong>Economize 20%</strong></li>
+            </ul>
+        </div>
+        
+        <button class="plan-cta" onclick="selectPlan('annual')" id="btn-annual">
+            Escolher plano
+        </button>
+        <div id="current-annual" class="current-plan" style="display:none;">
+            Seu plano atual
+        </div>
+    </div>
+</div>
+
+<!-- Informações sobre créditos -->
+<div class="credits-info">
+    <h3>💳 Como funcionam os créditos?</h3>
+    <p>
+        Cada consulta ao IRIS Agent consome <strong>5 créditos</strong>. Com o plano gratuito, você tem 
+        <strong>500 créditos por mês</strong> (100 consultas). Com os planos pagos, você renova automaticamente 
+        (mensal) ou tem acesso durante o período contratado (anual).
+    </p>
+    
+    <table class="credits-table">
+        <thead>
+            <tr>
+                <th>Plano</th>
+                <th>Créditos</th>
+                <th>Consultas</th>
+                <th>Preço</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Gratuito</td>
+                <td>500/mês</td>
+                <td>100/mês</td>
+                <td>Grátis</td>
+            </tr>
+            <tr>
+                <td>Mensal</td>
+                <td>500/mês</td>
+                <td>100/mês</td>
+                <td>R$ 29,90</td>
+            </tr>
+            <tr>
+                <td>Anual</td>
+                <td>6.000/ano</td>
+                <td>1.200/ano</td>
+                <td>R$ 299,90</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function selectPlan(planType) {
+    const btn = document.getElementById('btn-' + planType);
+    btn.disabled = true;
+    btn.textContent = 'Processando…';
+    
+    try {
+        const res = await fetch('/payment/create-preference', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({plan_type: planType})
+        });
+        
+        const data = await res.json();
+        
+        if (data.success && data.checkout_url) {
+            // Redireciona para Mercado Pago
+            window.location.href = data.checkout_url;
+        } else {
+            alert('Erro ao processar pagamento: ' + (data.error || 'Tente novamente'));
+            btn.disabled = false;
+            btn.textContent = 'Escolher plano';
+        }
+    } catch (err) {
+        alert('Erro de conexão: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Escolher plano';
+    }
+}
+
+// Atualiza UI com plano atual do usuário
+async function updateCurrentPlan() {
+    try {
+        const res = await fetch('/user/subscription');
+        const data = await res.json();
+        
+        if (data.success && data.subscription) {
+            const planType = data.subscription.plan_type;
+            if (planType === 'monthly') {
+                document.getElementById('btn-monthly').style.display = 'none';
+                document.getElementById('current-monthly').style.display = 'block';
+            } else if (planType === 'annual') {
+                document.getElementById('btn-annual').style.display = 'none';
+                document.getElementById('current-annual').style.display = 'block';
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao carregar plano atual:', err);
+    }
+}
+
+// Carrega ao iniciar
+updateCurrentPlan();
+</script>
+{% endblock %}

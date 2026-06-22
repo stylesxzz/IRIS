@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}Agente IA{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow"><span class="brand-mark" style="width:8px;height:8px;"></span> IRIS Agent · Mistral via Ollama</p>
+    <h1>Agente de Segurança</h1>
+    <p class="lead">Especialista em pentest, OSINT, análise de vulnerabilidades e investigação. Memória persistente — ele lembra de tudo entre sessões.</p>
+</section>
+
+<!-- Barra de status do agente -->
+<div id="agent_status_bar" class="card" style="padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span id="status_dot" style="width:9px;height:9px;border-radius:50%;background:var(--text-dim);flex-shrink:0;"></span>
+        <span id="status_text" style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--text-muted);">Verificando Hermes…</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <span id="credits_display" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-dim);"></span>
+        <span id="memory_count" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-dim);"></span>
+        <button class="btn btn-outline btn-sm" onclick="clearHistory()" id="clear_btn" style="display:none;">Limpar histórico</button>
+    </div>
+</div>
+
+<!-- Chat -->
+<section class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;" id="chat_section">
+
+    <!-- Mensagens -->
+    <div id="chat_messages" style="
+        flex:1;
+        overflow-y:auto;
+        padding:24px 22px;
+        display:flex;
+        flex-direction:column;
+        gap:18px;
+        min-height:420px;
+        max-height:60vh;
+    ">
+        <!-- Mensagem de boas-vindas -->
+        <div class="msg msg-ai">
+            <div class="msg-bubble msg-bubble-ai">
+                <p style="margin:0 0 8px;"><strong>Olá. Sou o agente de segurança da IRIS.</strong></p>
+                <p style="margin:0;color:var(--text-muted);font-size:0.92rem;">Posso te ajudar com análise de vulnerabilidades, interpretação de resultados de ferramentas, estratégias de pentest, OSINT e muito mais. Tenho memória persistente — vou lembrando do contexto da sua investigação ao longo do tempo.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sugestões rápidas -->
+    <div id="suggestions" style="padding:0 22px 14px;display:flex;flex-wrap:wrap;gap:8px;">
+        <button class="suggestion-btn" onclick="useSuggestion(this)">Como fazer um pentest em rede local?</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">Analisa esse resultado do nmap pra mim</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">Quais CVEs são críticos em 2025?</button>
+        <button class="suggestion-btn" onclick="useSuggestion(this)">Como descobrir subdomínios de um alvo?</button>
+    </div>
+
+    <!-- Input -->
+    <div style="border-top:1px solid var(--border);padding:16px 22px;display:flex;gap:10px;align-items:flex-end;">
+        <div class="terminal-input-row" style="flex:1;border-radius:var(--radius-sm);align-items:flex-end;">
+            <span class="prompt" style="padding-bottom:11px;">$</span>
+            <textarea
+                id="chat_input"
+                placeholder="Pergunta, resultado de ferramenta, alvo para análise…"
+                rows="1"
+                style="flex:1;background:transparent;border:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.9rem;padding:10px 0;resize:none;max-height:140px;line-height:1.5;"
+                oninput="autoResize(this)"
+                onkeydown="handleKey(event)"
+            ></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="sendMessage()" id="send_btn" style="flex-shrink:0;height:44px;padding:0 20px;">
+            Enviar
+        </button>
+    </div>
+</section>
+
+<!-- Dica de setup se Hermes não estiver instalado -->
+<section id="setup_banner" class="card" style="display:none;border:1px solid rgba(255,138,99,0.35);background:rgba(255,64,35,0.06);">
+    <p class="eyebrow">Setup necessário</p>
+    <p style="margin:0 0 14px;color:var(--text-muted);font-size:0.95rem;">
+        O Hermes Agent não está instalado ainda. Execute o script abaixo no Termux para configurar tudo:
+    </p>
+    <pre class="terminal-output" style="margin:0;">bash ~/setup_hermes.sh</pre>
+    <p style="margin:14px 0 0;font-size:0.82rem;color:var(--text-dim);">
+        O arquivo <code>setup_hermes.sh</code> está incluído no zip do projeto. Ele instala o Hermes, cria o profile <code>iris-agent</code> e configura a personalidade de especialista em segurança.
+    </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.msg { display:flex; }
+.msg-ai  { justify-content:flex-start; }
+.msg-user{ justify-content:flex-end; }
+
+.msg-bubble {
+    max-width:82%;
+    padding:14px 18px;
+    border-radius:16px;
+    font-size:0.92rem;
+    line-height:1.6;
+}
+.msg-bubble-ai {
+    background: rgba(255,255,255,0.04);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-bottom-left-radius:4px;
+}
+.msg-bubble-user {
+    background: linear-gradient(135deg, rgba(255,64,35,0.28), rgba(255,64,35,0.15));
+    border:1px solid rgba(255,64,35,0.35);
+    color:var(--text);
+    border-bottom-right-radius:4px;
+}
+.msg-bubble pre {
+    background:rgba(0,0,0,0.4);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:12px;
+    overflow-x:auto;
+    font-size:0.82rem;
+    margin:10px 0 0;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+.msg-bubble code {
+    font-family:'JetBrains Mono',monospace;
+    background:rgba(255,255,255,0.08);
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.88em;
+}
+.msg-ts {
+    font-size:0.72rem;
+    color:var(--text-dim);
+    margin-top:5px;
+    font-family:'JetBrains Mono',monospace;
+    text-align:right;
+}
+
+.suggestion-btn {
+    background:var(--panel);
+    border:1px solid var(--border-soft);
+    color:var(--text-muted);
+    border-radius:999px;
+    padding:7px 14px;
+    font-size:0.8rem;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    transition:all .15s;
+    white-space:nowrap;
+}
+.suggestion-btn:hover {
+    color:var(--text);
+    border-color:rgba(255,130,100,0.4);
+    background:rgba(255,64,35,0.08);
+}
+
+.typing-dot {
+    display:inline-block;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--text-muted);
+    animation:typing-bounce .9s infinite;
+    margin:0 2px;
+}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.30s}
+@keyframes typing-bounce{
+    0%,80%,100%{transform:translateY(0);opacity:.4}
+    40%{transform:translateY(-6px);opacity:1}
+}
+</style>
+
+<script>
+// ── Utilidades ───────────────────────────────────────────────────────────────
+function now() {
+    return new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+}
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function useSuggestion(btn) {
+    document.getElementById('chat_input').value = btn.textContent;
+    document.getElementById('suggestions').style.display = 'none';
+    sendMessage();
+}
+
+// ── Renderização de mensagens ─────────────────────────────────────────────────
+function renderMarkdown(text) {
+    // Blocos de código
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+        `<pre><code>${code.trim().replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`
+    );
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Quebras de linha
+    text = text.replace(/\n\n/g, '</p><p style="margin:8px 0 0;">');
+    text = text.replace(/\n/g, '<br>');
+    return `<p style="margin:0;">${text}</p>`;
+}
+
+function addMessage(role, content, animate=false) {
+    const wrap = document.getElementById('chat_messages');
+    document.getElementById('suggestions').style.display = 'none';
+
+    const div = document.createElement('div');
+    div.className = `msg msg-${role === 'user' ? 'user' : 'ai'}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = `msg-bubble msg-bubble-${role === 'user' ? 'user' : 'ai'}`;
+
+    if (animate && role !== 'user') {
+        bubble.innerHTML = `<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`;
+        div.appendChild(bubble);
+        wrap.appendChild(div);
+        wrap.scrollTop = wrap.scrollHeight;
+        return { div, bubble };
+    }
+
+    bubble.innerHTML = role === 'user'
+        ? `<p style="margin:0;white-space:pre-wrap;">${content.replace(/</g,'&lt;')}</p>`
+        : renderMarkdown(content);
+
+    const ts = document.createElement('div');
+    ts.className = 'msg-ts';
+    ts.textContent = now();
+
+    const inner = document.createElement('div');
+    inner.appendChild(bubble);
+    inner.appendChild(ts);
+    div.appendChild(inner);
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return { div, bubble };
+}
+
+function setTypingReply({ div, bubble }, content) {
+    bubble.innerHTML = renderMarkdown(content);
+    const ts = document.createElement('div');
+    ts.className = 'msg-ts';
+    ts.textContent = now();
+    div.querySelector('div') ? div.querySelector('div').appendChild(ts) : div.appendChild(ts);
+    document.getElementById('chat_messages').scrollTop = 99999;
+}
+
+// ── Enviar mensagem ───────────────────────────────────────────────────────────
+async function sendMessage() {
+    const input = document.getElementById('chat_input');
+    const btn   = document.getElementById('send_btn');
+    const msg   = input.value.trim();
+    if (!msg) return;
+
+    input.value = ''; input.style.height = 'auto';
+    btn.disabled = true; btn.textContent = '…';
+
+    addMessage('user', msg);
+    const typing = addMessage('assistant', '', true);
+
+    try {
+        const res  = await fetch('/agent/chat', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message: msg}),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            setTypingReply(typing, `⚠️ ${data.error}`);
+            if (data.error.includes('não instalado')) showSetupBanner();
+        } else {
+            setTypingReply(typing, data.reply);
+            updateMemoryCount(data.history_len);
+        }
+    } catch(e) {
+        setTypingReply(typing, '⚠️ Erro de conexão com o servidor.');
+    }
+
+    btn.disabled = false; btn.textContent = 'Enviar';
+    input.focus();
+}
+
+// ── Histórico ─────────────────────────────────────────────────────────────────
+async function loadHistory() {
+    try {
+        const res  = await fetch('/agent/history');
+        const data = await res.json();
+        if (data.length === 0) return;
+        // Limpa a mensagem de boas-vindas
+        document.getElementById('chat_messages').innerHTML = '';
+        data.forEach(m => addMessage(m.role, m.content));
+        updateMemoryCount(data.length / 2);
+        document.getElementById('clear_btn').style.display = '';
+    } catch(e) {}
+}
+
+function updateMemoryCount(n) {
+    const el = document.getElementById('memory_count');
+    el.textContent = n > 0 ? `${Math.round(n)} trocas na memória` : '';
+    document.getElementById('clear_btn').style.display = n > 0 ? '' : 'none';
+}
+
+async function clearHistory() {
+    if (!confirm('Apagar todo o histórico de conversas?')) return;
+    await fetch('/agent/clear', {method:'POST'});
+    document.getElementById('chat_messages').innerHTML = '';
+    addMessage('assistant', 'Histórico apagado. Começando do zero.');
+    updateMemoryCount(0);
+}
+
+// ── Status do Hermes ──────────────────────────────────────────────────────────
+async function checkHermesStatus() {
+    const dot  = document.getElementById('status_dot');
+    const text = document.getElementById('status_text');
+    try {
+        const res  = await fetch('/agent/chat', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message:'ping'}),
+        });
+        const data = await res.json();
+        if (data.error && data.error.includes('não instalado')) {
+            dot.style.background  = 'var(--red)';
+            dot.style.boxShadow   = '0 0 10px var(--red-glow)';
+            text.textContent      = 'Hermes não instalado — veja o banner abaixo';
+            showSetupBanner();
+        } else {
+            dot.style.background = 'var(--green)';
+            dot.style.boxShadow  = '0 0 10px var(--green-glow)';
+            text.textContent     = 'Hermes online · profile iris-agent · Mistral';
+        }
+    } catch(e) {
+        dot.style.background = 'var(--text-dim)';
+        text.textContent     = 'Servidor offline';
+    }
+}
+
+function showSetupBanner() {
+    document.getElementById('setup_banner').style.display = 'block';
+}
+
+// ── Carrega créditos ────────────────────────────────────────────────────────
+async function updateCreditsDisplay() {
+    try {
+        const res = await fetch('/credits/balance');
+        const data = await res.json();
+        if (data.success) {
+            const el = document.getElementById('credits_display');
+            el.textContent = `${data.balance} créditos`;
+        }
+    } catch (e) {}
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadHistory();
+checkHermesStatus();
+updateCreditsDisplay();
+setInterval(updateCreditsDisplay, 30000); // Atualiza a cada 30 segundos
+</script>
+{% endblock %}

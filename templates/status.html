@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Status das Ferramentas{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Diagnóstico</p>
+    <h1>Status das Ferramentas</h1>
+    <p class="lead">Visão geral de tudo que está instalado, ausente e da conectividade do sistema.</p>
+</section>
+
+<section class="card status-banner {{ 'status-on' if online_status == 'ONLINE' else 'status-off' }}">
+    <span class="status-dot"></span>
+    <div>
+        <span class="status-banner-label">Conexão com a internet</span>
+        <span class="status-banner-value">{{ online_status }}</span>
+    </div>
+</section>
+
+<section class="grid grid-status">
+    {% for category, tools in status_info.items() %}
+    <div class="card status-card">
+        <h3>{{ category.replace('_', ' ').title() }}</h3>
+        <ul class="chip-list">
+            {% for tool in tools %}
+            <li class="chip {{ 'chip-on' if tool.status == 'Instalado' else 'chip-off' }}">
+                <span class="chip-dot"></span>{{ tool.name }}{% if tool.version != 'n/a' %} <span class="chip-version">v{{ tool.version }}</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

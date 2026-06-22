@@ -1,0 +1,7 @@
+Flask==2.3.2
+Werkzeug==2.3.6
+requests==2.31.0
+Flask-Session==0.5.0
+Flask-Cors==4.0.0
+argon2-cffi>=23.1.0
+mercadopago>=2.2.0

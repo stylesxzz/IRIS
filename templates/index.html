@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow"><span class="brand-mark" style="width:8px;height:8px;"></span> Painel local de pentest</p>
+        <h1>Seu arsenal de<br><span class="accent">recon</span> &amp; intrusão,<br>sob demanda.</h1>
+        <p class="lead">
+            Mais de 150 ferramentas organizadas em 20 categorias — instale,
+            atualize e execute direto pelo navegador, com tudo registrado
+            em um log central.
+        </p>
+        <div class="hero-actions">
+            <a href="/menu" class="btn btn-primary">Abrir Menu Principal</a>
+            <a href="/tool_status" class="btn btn-ghost">Ver Status das Ferramentas</a>
+        </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+        <div class="iris-scan">
+            <span class="ring ring-1"></span>
+            <span class="ring ring-2"></span>
+            <span class="ring ring-3"></span>
+            <span class="sweep"></span>
+            <span class="pupil"></span>
+        </div>
+    </div>
+</section>
+
+<section class="stat-grid">
+    <div class="card stat-card">
+        <span class="stat-num">20</span>
+        <span class="stat-label">Categorias de ferramentas</span>
+    </div>
+    <div class="card stat-card">
+        <span class="stat-num">150+</span>
+        <span class="stat-label">Ferramentas catalogadas</span>
+    </div>
+    <div class="card stat-card">
+        <span class="stat-num">24</span>
+        <span class="stat-label">Módulos no menu principal</span>
+    </div>
+</section>
+
+<section class="card panel-wide">
+    <p class="eyebrow">Como funciona</p>
+    <p class="panel-text">
+        Navegue pelas categorias no <a href="/menu">menu principal</a>, veja o que já está
+        <strong>instalado</strong> e o que está <strong>ausente</strong>, instale com um clique
+        e execute comandos personalizados direto na interface — tudo registrado no
+        <a href="/view_log">log central</a> em <code>~/.iris/iris.log</code>.
+    </p>
+</section>
+{% endblock %}

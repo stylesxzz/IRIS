@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Menu Principal{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">24 módulos disponíveis</p>
+    <h1>Menu Principal</h1>
+    <p class="lead">Escolha uma categoria para ver, instalar e executar as ferramentas.</p>
+</section>
+
+<section class="grid grid-categories">
+    <a class="card cat-card" href="/category/recon"><span class="cat-num">01</span><span class="cat-name">Information Gathering</span><span class="cat-sub">OSINT &amp; Recon</span></a>
+    <a class="card cat-card" href="/category/vulnerability_analysis"><span class="cat-num">02</span><span class="cat-name">Vulnerability Analysis</span><span class="cat-sub">Análise de vulnerabilidades</span></a>
+    <a class="card cat-card" href="/category/web"><span class="cat-num">03</span><span class="cat-name">Web Application Analysis</span><span class="cat-sub">Aplicações web</span></a>
+    <a class="card cat-card" href="/category/database_assessment"><span class="cat-num">04</span><span class="cat-name">Database Assessment</span><span class="cat-sub">Bancos de dados</span></a>
+    <a class="card cat-card" href="/category/password"><span class="cat-num">05</span><span class="cat-name">Password Attacks</span><span class="cat-sub">Ataques a senhas</span></a>
+    <a class="card cat-card" href="/category/wireless"><span class="cat-num">06</span><span class="cat-name">Wireless Attacks</span><span class="cat-sub">Redes sem fio</span></a>
+    <a class="card cat-card" href="/category/exploitation"><span class="cat-num">07</span><span class="cat-name">Exploitation Tools</span><span class="cat-sub">Exploração</span></a>
+    <a class="card cat-card" href="/category/sniffing"><span class="cat-num">08</span><span class="cat-name">Sniffing &amp; Spoofing</span><span class="cat-sub">Tráfego de rede</span></a>
+    <a class="card cat-card" href="/category/post_exploitation"><span class="cat-num">09</span><span class="cat-name">Post Exploitation</span><span class="cat-sub">Pós-exploração</span></a>
+    <a class="card cat-card" href="/category/forensics"><span class="cat-num">10</span><span class="cat-name">Forensics</span><span class="cat-sub">Análise forense</span></a>
+    <a class="card cat-card" href="/category/reverse_engineering"><span class="cat-num">11</span><span class="cat-name">Reverse Engineering</span><span class="cat-sub">Engenharia reversa</span></a>
+    <a class="card cat-card" href="/category/android_hacking"><span class="cat-num">12</span><span class="cat-name">Hardware / Android</span><span class="cat-sub">Hardware &amp; mobile</span></a>
+    <a class="card cat-card" href="/category/social_engineering"><span class="cat-num">13</span><span class="cat-name">Social Engineering</span><span class="cat-sub">Engenharia social</span></a>
+    <a class="card cat-card" href="/category/reporting"><span class="cat-num">14</span><span class="cat-name">Reporting Tools</span><span class="cat-sub">Relatórios</span></a>
+    <a class="card cat-card" href="/category/system"><span class="cat-num">15</span><span class="cat-name">Maintenance / System</span><span class="cat-sub">Sistema &amp; manutenção</span></a>
+    <a class="card cat-card" href="/category/network_scanning"><span class="cat-num">16</span><span class="cat-name">Network Scan</span><span class="cat-sub">Varredura &amp; enumeração</span></a>
+    <a class="card cat-card" href="/category/cryptography"><span class="cat-num">17</span><span class="cat-name">Cryptography</span><span class="cat-sub">Criptografia &amp; cracking</span></a>
+    <a class="card cat-card" href="/category/voip"><span class="cat-num">18</span><span class="cat-name">VoIP Attacks</span><span class="cat-sub">Voz sobre IP</span></a>
+    <a class="card cat-card" href="/category/stress_testing"><span class="cat-num">19</span><span class="cat-name">Stress Testing</span><span class="cat-sub">Testes de carga / DDoS</span></a>
+    <a class="card cat-card" href="/category/file_analysis"><span class="cat-num">20</span><span class="cat-name">File &amp; Data Analysis</span><span class="cat-sub">Arquivos &amp; dados</span></a>
+</section>
+
+<section class="page-head page-head-tight">
+    <p class="eyebrow">Gerenciamento</p>
+    <h2>Operações gerais</h2>
+</section>
+
+<section class="grid grid-manage">
+    <button class="card manage-card" onclick="installBasicTools()" type="button">
+        <span class="cat-num">21</span>
+        <span class="cat-name">Instalar ferramentas básicas</span>
+    </button>
+    <button class="card manage-card" onclick="updateAllTools()" type="button">
+        <span class="cat-num">22</span>
+        <span class="cat-name">Atualizar todas as ferramentas</span>
+    </button>
+    <a class="card manage-card" href="/tool_status">
+        <span class="cat-num">23</span>
+        <span class="cat-name">Status geral de ferramentas</span>
+    </a>
+    <a class="card manage-card" href="/view_log">
+        <span class="cat-num">24</span>
+        <span class="cat-name">Visualizar log do sistema</span>
+    </a>
+</section>
+
+<section id="manage_output" class="card terminal-panel" style="display:none;">
+    <p class="eyebrow">Resultado</p>
+    <pre id="manage_output_text" class="terminal-output"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showManageOutput(text) {
+        const panel = document.getElementById("manage_output");
+        const out = document.getElementById("manage_output_text");
+        out.textContent = text;
+        panel.style.display = "block";
+        panel.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+
+    function installBasicTools() {
+        showManageOutput("Instalando ferramentas básicas...");
+        fetch("/install_basic_tools")
+            .then(response => response.json())
+            .then(data => showManageOutput(data.output))
+            .catch(error => showManageOutput("Erro: " + error));
+    }
+
+    function updateAllTools() {
+        showManageOutput("Atualizando todas as ferramentas...");
+        fetch("/update_all_tools")
+            .then(response => response.json())
+            .then(data => showManageOutput(data.output))
+            .catch(error => showManageOutput("Erro: " + error));
+    }
+</script>
+{% endblock %}

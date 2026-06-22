@@ -1,0 +1,49 @@
+# ── Segredos e configuração local ──────────────────────
+.env
+*.env
+
+# ── Banco de dados (dados dos usuários) ────────────────
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+iris_users.db
+
+# ── Sessões Flask ───────────────────────────────────────
+flask_session/
+
+# ── Logs e auditoria ───────────────────────────────────
+*.log
+*.jsonl
+~/.iris/
+
+# ── Python ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Ambientes virtuais ──────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── IDEs ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Sistema operacional ─────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IRIS: pastas de ferramentas e cache ────────────────
+tools/
+cache/

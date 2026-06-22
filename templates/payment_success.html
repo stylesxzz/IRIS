@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Pagamento Confirmado{% endblock %}
+
+{% block content %}
+<style>
+    .payment-result {
+        max-width: 500px;
+        margin: 80px auto;
+        text-align: center;
+        padding: 40px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    
+    .result-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+    }
+    
+    .result-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0 0 12px;
+    }
+    
+    .result-message {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0 0 32px;
+    }
+    
+    .result-cta {
+        display: inline-block;
+        padding: 12px 32px;
+        background: linear-gradient(135deg, rgba(255, 64, 35, 0.9), rgba(255, 100, 50, 0.9));
+        border: 1px solid rgba(255, 64, 35, 0.5);
+        border-radius: var(--radius-sm);
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .result-cta:hover {
+        background: linear-gradient(135deg, rgba(255, 64, 35, 1), rgba(255, 100, 50, 1));
+        box-shadow: 0 8px 24px rgba(255, 64, 35, 0.25);
+    }
+</style>
+
+<div class="payment-result">
+    <div class="result-icon">✅</div>
+    <h1 class="result-title">Pagamento Confirmado!</h1>
+    <p class="result-message">
+        Seu pagamento foi processado com sucesso. Seus créditos foram adicionados à conta e você já pode começar a usar o IRIS Agent.
+    </p>
+    <a href="/agent" class="result-cta">Ir para o Agente</a>
+</div>
+
+{% endblock %}

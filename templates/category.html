@@ -1,0 +1,925 @@
+{% extends "base.html" %}
+{% block title %}{{ category_name.replace('_', ' ').title() }}{% endblock %}
+
+{% block content %}
+<section class="page-head" style="padding-bottom:0;">
+    <p class="eyebrow">Categoria</p>
+    <h1>{{ category_name.replace('_', ' ').title() }}</h1>
+</section>
+
+<!-- Ferramentas colapsáveis -->
+<details class="card" style="padding:0;overflow:hidden;" id="tools_panel">
+    <summary style="padding:16px 22px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;display:flex;align-items:center;justify-content:space-between;list-style:none;gap:12px;">
+        <span>{{ tools|length }} ferramenta(s) — clique para expandir</span>
+        <span style="color:var(--text-dim);font-size:0.8rem;">▼</span>
+    </summary>
+    <div class="tools-collapse-grid">
+        {% for tool in tools %}
+        <div class="card tool-card" style="padding:16px;">
+            <div class="tool-card-head">
+                <div><span class="tool-name">{{ tool.name }}</span>{% if tool.version != 'n/a' %}<span class="tool-version">v{{ tool.version }}</span>{% endif %}</div>
+                <span class="pill {{ 'pill-on' if tool.status == 'Instalado' else 'pill-off' }}">{{ tool.status }}</span>
+            </div>
+            <p class="tool-desc">{{ tool.description }}</p>
+            <div class="tool-card-actions">
+                <button class="btn btn-primary btn-sm" onclick="runFromButton('{{ tool.name }}')" type="button">Executar</button>
+                {% if tool.status == 'Ausente' %}<button class="btn btn-outline btn-sm" onclick="installTool('{{ tool.name }}','{{ tool.pkg }}','{{ tool.method }}')" type="button">Instalar</button>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        <div style="grid-column:1/-1;display:flex;justify-content:flex-end;">
+            <button class="btn btn-ghost btn-sm" onclick="openAddModal()" type="button">+ Adicionar ferramenta</button>
+        </div>
+    </div>
+</details>
+
+<!-- MAPA DE INVESTIGAÇÃO -->
+<section class="card" style="padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 12px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;">
+        <div>
+            <p class="eyebrow" style="margin:0 0 2px;">Mapa de investigação</p>
+            <p style="margin:0;font-size:0.78rem;color:var(--text-muted);" id="map_hint">Execute uma ferramenta para começar · Toque em um nó para usar ferramentas</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="zoomMap('mindmap',1.2)" title="Aumentar zoom">+</button>
+            <button class="btn btn-outline btn-sm" onclick="zoomMap('mindmap',0.8)" title="Diminuir zoom">−</button>
+            <button class="btn btn-outline btn-sm" onclick="resetView('mindmap')" title="Centralizar mapa">⊙ Centralizar</button>
+            <button class="btn btn-outline btn-sm" onclick="reorganizeMap()" id="reorganize_map_btn" style="display:none;">↻ Reorganizar</button>
+            <button class="btn btn-outline btn-sm" onclick="clearMap()" id="clear_map_btn" style="display:none;">Limpar mapa</button>
+            <button class="btn btn-primary btn-sm" onclick="openFullscreen()">⛶ Tela cheia</button>
+        </div>
+    </div>
+    <canvas id="mindmap" style="width:100%;display:block;touch-action:none;cursor:crosshair;"></canvas>
+    <div id="map_legend" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 20px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:0.72rem;"></div>
+</section>
+
+<!-- Painel contextual do nó (slide-up no mobile) -->
+<div id="node_panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:10500;background:var(--bg-soft);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -20px 60px rgba(0,0,0,0.6);max-height:75vh;overflow-y:auto;">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+        <div>
+            <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-dim);" id="np_type"></p>
+            <p style="margin:0;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:1.05rem;color:var(--text);word-break:break-all;" id="np_value"></p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeNodePanel()" style="flex-shrink:0;">✕</button>
+    </div>
+    <p style="margin:0 0 12px;font-size:0.82rem;color:var(--text-muted);">Ferramentas sugeridas — toque para executar a partir deste nó:</p>
+    <div id="np_tools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <p style="margin:0 0 8px;font-size:0.78rem;color:var(--text-dim);">Ou use o comando personalizado:</p>
+        <div class="terminal-input-row" style="border-radius:var(--radius-sm);">
+            <span class="prompt">$</span>
+            <input type="text" id="np_cmd" spellcheck="false" autocomplete="off" style="font-size:0.88rem;" placeholder="nmap -sV ...">
+            <button class="btn btn-primary btn-sm" onclick="runFromNodePanel()" type="button">↵</button>
+        </div>
+    </div>
+    <div id="np_raw_history" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
+        <p style="margin:0 0 8px;font-size:0.78rem;color:var(--text-dim);">Histórico de execuções (output bruto) deste nó:</p>
+    </div>
+</div>
+<div id="node_backdrop" onclick="closeNodePanel()" style="display:none;position:fixed;inset:0;z-index:6999;"></div>
+
+<!-- Terminal global -->
+<section class="card terminal-panel" id="terminal_section">
+    <p class="eyebrow">Comando personalizado</p>
+    <div class="terminal-input-row">
+        <span class="prompt">$</span>
+        <input type="text" id="custom_command" placeholder="nmap -sV 192.168.1.1" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary btn-sm" onclick="executeCustomCommand()" id="run_btn" type="button">Executar</button>
+    </div>
+    <pre id="command_output" class="terminal-output" style="display:none;"></pre>
+</section>
+
+<!-- Modal adicionar ferramenta -->
+<div id="add_modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;">
+    <div class="card" style="width:100%;max-width:480px;padding:26px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div><p class="eyebrow" style="margin:0 0 2px;">Nova ferramenta</p><p style="margin:0;font-size:0.82rem;color:var(--text-muted);">Cole um link GitHub ou nome de pacote</p></div>
+            <button class="btn btn-ghost btn-sm" onclick="closeAddModal()">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+            <label style="font-size:0.8rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:.04em;">NOME DO BINÁRIO</label>
+            <div class="terminal-input-row" style="border-radius:var(--radius-sm);"><input type="text" id="add_name" placeholder="ex: nuclei" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+            <label style="font-size:0.8rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:.04em;">REPOSITÓRIO / PACOTE</label>
+            <div class="terminal-input-row" style="border-radius:var(--radius-sm);"><input type="text" id="add_pkg" placeholder="https://github.com/user/repo ou nmap" autocomplete="off" spellcheck="false" oninput="autoDetectMethod()"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:0.8rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:.04em;">MÉTODO</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="method_pills">
+                <button type="button" class="pill pill-method" data-m="git" onclick="selectMethod('git')">git clone</button>
+                <button type="button" class="pill pill-method" data-m="pkg" onclick="selectMethod('pkg')">pkg (apt)</button>
+                <button type="button" class="pill pill-method" data-m="pip" onclick="selectMethod('pip')">pip install</button>
+                <button type="button" class="pill pill-method" data-m="go"  onclick="selectMethod('go')">go install</button>
+            </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:var(--text-muted);"><input type="checkbox" id="install_now" checked style="accent-color:var(--red);"> Instalar agora após adicionar</label>
+        <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="submitAddTool()" id="add_btn">Adicionar</button>
+            <button class="btn btn-ghost" onclick="closeAddModal()">Cancelar</button>
+        </div>
+        <pre id="add_output" class="terminal-output" style="display:none;margin:0;"></pre>
+    </div>
+</div>
+
+<!-- Fullscreen -->
+<div id="fs_overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0a0908;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
+        <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#f5f0ec;">Mapa de investigação</p>
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="zoomMap('mindmap_fs',1.2)">+</button>
+            <button class="btn btn-outline btn-sm" onclick="zoomMap('mindmap_fs',0.8)">−</button>
+            <button class="btn btn-outline btn-sm" onclick="resetView('mindmap_fs')">⊙ Centralizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeFullscreen()">✕ Fechar</button>
+        </div>
+    </div>
+    <canvas id="mindmap_fs" style="flex:1;width:100%;touch-action:none;cursor:crosshair;"></canvas>
+    <div id="map_legend_fs" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 18px;border-top:1px solid rgba(255,255,255,0.08);font-family:'JetBrains Mono',monospace;font-size:0.7rem;"></div>
+</div>
+
+<style>
+.pill-method{background:var(--panel);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:6px 13px;border-radius:999px;transition:all .15s;}
+.pill-method.active{background:rgba(255,64,35,0.18);border-color:var(--red-soft);color:var(--red-soft);}
+.np-tool-btn{background:var(--panel);border:1px solid var(--border-soft);color:var(--text-muted);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:0.78rem;padding:8px 14px;border-radius:999px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;}
+.np-tool-btn:hover,.np-tool-btn.installed{border-color:rgba(61,220,132,0.4);color:var(--green);}
+.np-tool-btn.missing{border-color:rgba(255,64,35,0.35);color:var(--red-soft);}
+.np-tool-btn .status-tag{font-size:0.62rem;opacity:.7;}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Tipos de nó ──────────────────────────────────────────────────────────────
+const T = {
+    root:    {color:'#ff4023',r:26,label:'Alvo'},
+    ip:      {color:'#ff8a63',r:18,label:'IP'},
+    port:    {color:'#ffd4b8',r:13,label:'Porta'},
+    service: {color:'#a78bfa',r:15,label:'Serviço'},
+    domain:  {color:'#60a5fa',r:16,label:'Domínio'},
+    url:     {color:'#34d399',r:13,label:'URL'},
+    cve:     {color:'#f87171',r:14,label:'CVE'},
+    info:    {color:'#94a3b8',r:11,label:'Info'},
+};
+
+// Ferramentas sugeridas por tipo de nó + argumento padrão
+const TOOLS_BY_TYPE = {
+    ip:      [{name:'nmap',     args: v=>`-sV -sC ${v}`},
+              {name:'masscan',  args: v=>`${v} -p 1-65535`},
+              {name:'nikto',    args: v=>`-h ${v}`},
+              {name:'whatweb',  args: v=>`${v}`},
+              {name:'rustscan', args: v=>`-a ${v}`}],
+    port:    [{name:'nmap',     args: v=>`-p ${v.split('/')[0]} -sV -sC `},
+              {name:'nc',       args: v=>`-zv TARGET ${v.split('/')[0]}`}],
+    service: [{name:'searchsploit', args: v=>`${v}`},
+              {name:'msfconsole',   args: v=>`-q -x "search ${v}"`}],
+    domain:  [{name:'whois',       args: v=>`${v}`},
+              {name:'subfinder',   args: v=>`-d ${v}`},
+              {name:'dnsx',        args: v=>`-d ${v}`},
+              {name:'theHarvester',args: v=>`-d ${v} -b all`},
+              {name:'amass',       args: v=>`enum -d ${v}`}],
+    url:     [{name:'nikto',       args: v=>`-h ${v}`},
+              {name:'gobuster',    args: v=>`dir -u ${v} -w /usr/share/wordlists/dirb/common.txt`},
+              {name:'sqlmap',      args: v=>`-u ${v} --dbs`},
+              {name:'ffuf',        args: v=>`-u ${v}/FUZZ -w /usr/share/wordlists/dirb/common.txt`}],
+    cve:     [{name:'searchsploit',args: v=>`${v}`},
+              {name:'msfconsole',  args: v=>`-q -x "search ${v}"`}],
+    info:    [{name:'nmap',        args: v=>`-A `}],
+};
+
+// Lista de ferramentas instaladas (preenchida pelo backend)
+const INSTALLED = new Set({{ tools | selectattr('status','equalto','Instalado') | map(attribute='name') | list | tojson }});
+const ALL_TOOLS  = {{ tools | map(attribute='name') | list | tojson }};
+
+// ─── Grafo persistente ───────────────────────────────────────────────────────
+const MAP_KEY = 'iris_map_{{ category_name }}';
+
+function loadGraph() {
+    try { return JSON.parse(localStorage.getItem(MAP_KEY)) || {nodes:[],links:[]}; }
+    catch { return {nodes:[],links:[]}; }
+}
+function saveGraph(g) {
+    localStorage.setItem(MAP_KEY, JSON.stringify(g));
+}
+
+let GRAPH = loadGraph();
+
+// ─── Parser de saída ─────────────────────────────────────────────────────────
+function parseOutput(text, rootId, rootLabel) {
+    const newNodes = [], newLinks = [];
+    const existingIds = new Set(GRAPH.nodes.map(n=>n.id));
+    const seenThisRun = new Set(); // evita duplicar dentro da mesma execução
+
+    function add(id, label, type, parent) {
+        if (existingIds.has(id) || seenThisRun.has(id)) return id;
+        seenThisRun.add(id);
+        existingIds.add(id);
+        newNodes.push({id, label:String(label).slice(0,28), type, val:label});
+        newLinks.push({s: parent||rootId, t: id});
+        return id;
+    }
+
+    // IPs
+    const ips = [...new Set([...text.matchAll(/\b(\d{1,3}\.){3}\d{1,3}\b/g)].map(m=>m[0]))];
+    ips.forEach(ip => add('ip_'+ip, ip, 'ip', rootId));
+
+    // Portas abertas + serviço (vinculados ao IP mais próximo encontrado antes no texto,
+    // ou ao primeiro IP da execução, ou à raiz se não houver IP nenhum)
+    const portRe = /(\d+)\/(tcp|udp)\s+open\s+(\S*)/gi;
+    let pm;
+    while ((pm = portRe.exec(text)) !== null) {
+        const [,port,proto,svc] = pm;
+        const before = text.slice(0, pm.index);
+        const beforeIps = [...before.matchAll(/\b(\d{1,3}\.){3}\d{1,3}\b/g)];
+        const ipForPort = beforeIps.length ? beforeIps[beforeIps.length-1][0] : (ips[0] || null);
+        const par = ipForPort ? 'ip_'+ipForPort : rootId;
+        const pid = ipForPort ? `port_${ipForPort}_${port}${proto}` : `port_${rootId}_${port}${proto}`;
+        add(pid, `${port}/${proto}`, 'port', par);
+        if (svc && svc.trim()) add(`svc_${pid}_${svc}`, svc, 'service', pid);
+    }
+
+    // Domínios — versão mais rigorosa: exige que o que vem ANTES do match
+    // não seja parte de um caminho de arquivo (/, \), um nome de script NSE
+    // (geralmente tem hífens e termina em palavras como -info, -title, -cert
+    // sem TLD de verdade) nem esteja colado a outro caractere alfanumérico
+    // (o que indicaria que é um pedaço de uma palavra maior, não um domínio).
+    const domRe = /(?:^|[\s"'(<\[])((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.){1,5}(?:com|net|org|io|gov|edu|br|co|info|biz|dev|app|me|xyz|online|site|tech|cloud))(?:[\s"')>\],.:]|$)/g;
+    let dm;
+    const seenDomains = new Set();
+    while ((dm = domRe.exec(text)) !== null) {
+        const d = dm[1].toLowerCase();
+        // Ignora se contiver padrões típicos de nomes de scripts/arquivos do nmap
+        // (ex: "http-title.nse", "ssl-cert.pem") em vez de domínios reais
+        if (d.length < 60 && !seenDomains.has(d) && !/\.(nse|py|sh|pl|lua|txt|log|cfg|conf|pem|key|crt)$/i.test(d)) {
+            seenDomains.add(d);
+            add('dom_'+d, d, 'domain', rootId);
+        }
+    }
+
+    // URLs
+    const urlRe = /https?:\/\/[^\s"'<>]{4,80}/g;
+    let um;
+    while((um=urlRe.exec(text))!==null) {
+        const u=um[0];
+        add('url_'+u, u.length>34?u.slice(0,31)+'…':u, 'url', rootId);
+    }
+
+    // CVEs
+    const cveRe = /CVE-\d{4}-\d{4,7}/gi;
+    let cm;
+    while((cm=cveRe.exec(text))!==null) {
+        const c=cm[0].toUpperCase();
+        add('cve_'+c, c, 'cve', rootId);
+    }
+
+    // Info (OS, MAC, etc) — cada ocorrência é mantida (sem filtrar conteúdo),
+    // mas a chave de deduplicação usa o texto inteiro, não só os 10 primeiros
+    // caracteres, evitando que infos diferentes colidam no mesmo ID
+    const infoRe = /(?:OS details|MAC Address|Service Info|Running):\s*(.{4,80})/gi;
+    let im;
+    while((im=infoRe.exec(text))!==null) {
+        const val = im[1].trim();
+        add('inf_'+val, val, 'info', rootId);
+    }
+
+    return {newNodes, newLinks};
+}
+
+// ─── Física Verlet ───────────────────────────────────────────────────────────
+function simulate(nodes, links, W, H, steps) {
+    const REP=4200, LINK_DIST=115, LINK_K=0.05, DAMP=0.78;
+    const LABEL_MARGIN=58; // espaço extra para o label não cortar na borda
+    nodes.forEach((n,i) => {
+        if (n.x===undefined) {
+            const dist = n.type==='root'?0 : n.type==='ip'?110 : n.type==='port'||n.type==='domain'?190:265;
+            const ang = (i/nodes.length)*Math.PI*2;
+            n.x = W/2 + Math.cos(ang)*dist + (Math.random()-.5)*30;
+            n.y = H/2 + Math.sin(ang)*dist + (Math.random()-.5)*30;
+            n.vx=0; n.vy=0;
+        }
+    });
+    const idx = Object.fromEntries(nodes.map(n=>[n.id,n]));
+    const pairs = links.map(l=>[idx[l.s],idx[l.t]]).filter(([a,b])=>a&&b);
+    for (let s=0;s<steps;s++) {
+        for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+            const a=nodes[i],b=nodes[j];
+            if (a.pinned && b.pinned) continue;
+            let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy||.01,d=Math.sqrt(d2);
+            const f=REP/d2,fx=(dx/d)*f,fy=(dy/d)*f;
+            if (!a.pinned) { a.vx-=fx;a.vy-=fy; }
+            if (!b.pinned) { b.vx+=fx;b.vy+=fy; }
+        }
+        for (const [a,b] of pairs) {
+            if (a.pinned && b.pinned) continue;
+            const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||.01;
+            const f=(d-LINK_DIST)*LINK_K,fx=(dx/d)*f,fy=(dy/d)*f;
+            if (!a.pinned) { a.vx+=fx;a.vy+=fy; }
+            if (!b.pinned) { b.vx-=fx;b.vy-=fy; }
+        }
+        for (const n of nodes) {
+            if (n.type==='root'){n.x=W/2;n.y=H/2;n.vx=0;n.vy=0;continue;}
+            if (n.pinned) { n.vx=0; n.vy=0; continue; }
+            n.vx*=DAMP;n.vy*=DAMP;
+            // Sem clamp de borda: o mapa pode crescer além da tela visível.
+            // Navegação fica a cargo do pan/zoom (arrastar o fundo / pinça).
+            n.x=n.x+n.vx;
+            n.y=n.y+n.vy;
+        }
+    }
+}
+
+// ─── Estado de Pan/Zoom (por canvas) ──────────────────────────────────────────
+const VIEW_STATE = new Map(); // canvas -> {ox, oy, scale}
+function getView(canvas) {
+    if (!VIEW_STATE.has(canvas)) VIEW_STATE.set(canvas, {ox:0, oy:0, scale:1});
+    return VIEW_STATE.get(canvas);
+}
+// Converte coordenadas de tela (clientX/Y relativos ao canvas) para coordenadas do mundo do grafo
+function screenToWorld(canvas, sx, sy) {
+    const v = getView(canvas);
+    return { x: (sx - v.ox) / v.scale, y: (sy - v.oy) / v.scale };
+}
+
+// ─── Desenho ─────────────────────────────────────────────────────────────────
+function drawGraph(canvas, nodes, links, highlighted) {
+    const dpr=window.devicePixelRatio||1;
+    const W=canvas.offsetWidth||window.innerWidth;
+    const H=canvas.offsetHeight||420;
+    if (canvas.width!==W*dpr || canvas.height!==H*dpr) {
+        canvas.width=W*dpr; canvas.height=H*dpr;
+    }
+    const ctx=canvas.getContext('2d');
+    const v = getView(canvas);
+    ctx.save(); ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    // Aplica pan (translação) e zoom (escala) do usuário
+    ctx.translate(v.ox, v.oy);
+    ctx.scale(v.scale, v.scale);
+
+    const idx=Object.fromEntries(nodes.map(n=>[n.id,n]));
+
+    // Links
+    for (const l of links) {
+        const a=idx[l.s],b=idx[l.t];
+        if(!a||!b) continue;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+        ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1.2; ctx.stroke();
+    }
+
+    // Calcula posições de label evitando sobreposição entre nós próximos.
+    // Quando dois nós estão muito perto, alterna o label entre cima/baixo do nó.
+    const labelOffsets = nodes.map(() => 1); // 1 = abaixo, -1 = acima
+    for (let i=0;i<nodes.length;i++) {
+        for (let j=0;j<i;j++) {
+            const a=nodes[i], b=nodes[j];
+            const dx=a.x-b.x, dy=a.y-b.y;
+            const dist=Math.sqrt(dx*dx+dy*dy);
+            if (dist < 60 && labelOffsets[i]===labelOffsets[j]) {
+                labelOffsets[i] = -labelOffsets[j];
+            }
+        }
+    }
+
+    // Nós
+    nodes.forEach((n, i) => {
+        const cfg=T[n.type]||T.info, r=cfg.r;
+        const isHl = highlighted===n.id;
+        const labelDir = n.type==='root' ? 1 : labelOffsets[i];
+
+        // Glow
+        const g=ctx.createRadialGradient(n.x,n.y,r*.2,n.x,n.y,r*(isHl?3.8:2.6));
+        g.addColorStop(0,cfg.color+(isHl?'88':'44')); g.addColorStop(1,'transparent');
+        ctx.beginPath(); ctx.arc(n.x,n.y,r*(isHl?3.8:2.6),0,Math.PI*2);
+        ctx.fillStyle=g; ctx.fill();
+
+        // Círculo
+        ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
+        ctx.fillStyle=cfg.color+'28';
+        ctx.strokeStyle=cfg.color;
+        ctx.lineWidth=isHl?3:1.6;
+        ctx.fill(); ctx.stroke();
+        if (n.pinned) {
+            // pequeno indicador de que o nó foi fixado manualmente
+            ctx.beginPath(); ctx.arc(n.x+r*0.7,n.y-r*0.7,3,0,Math.PI*2);
+            ctx.fillStyle='#fff'; ctx.fill();
+        }
+
+        // Fundo semi-opaco atrás do texto para legibilidade em sobreposições
+        function labelBg(text, font, x, y) {
+            ctx.font = font;
+            const w = ctx.measureText(text).width;
+            ctx.fillStyle = 'rgba(15,12,11,0.72)';
+            ctx.fillRect(x - w/2 - 3, y - 8, w + 6, 11);
+        }
+
+        // Tag tipo
+        if (n.type!=='root') {
+            const ty = labelDir>0 ? n.y-r-5 : n.y+r+13+11;
+            ctx.font='7.5px Inter,sans-serif';
+            labelBg(cfg.label, '7.5px Inter,sans-serif', n.x, ty);
+            ctx.fillStyle=cfg.color+'aa'; ctx.textAlign='center';
+            ctx.fillText(cfg.label,n.x,ty);
+        }
+        // Label
+        const font=(n.type==='root'?'bold 10px':'9px')+' "JetBrains Mono",monospace';
+        const ly = n.type==='root' ? n.y+r+13 : (labelDir>0 ? n.y+r+13 : n.y-r-5);
+        labelBg(n.label, font, n.x, ly);
+        ctx.font=font;
+        ctx.fillStyle='#ede8e4'; ctx.textAlign='center';
+        ctx.fillText(n.label,n.x,ly);
+    });
+
+    ctx.restore();
+}
+
+// ─── Canvas principal ─────────────────────────────────────────────────────────
+let HIGHLIGHTED = null;
+let CANVAS_NODES = [];
+let RAF_ID = null;
+
+function renderMap(animated=false) {
+    const canvas=document.getElementById('mindmap');
+    const W=canvas.offsetWidth||window.innerWidth;
+    const H=Math.max(380,Math.min(560,Math.round(W*.82)));
+    canvas.style.height=H+'px';
+
+    simulate(GRAPH.nodes, GRAPH.links, W, H, animated?180:0);
+    CANVAS_NODES = GRAPH.nodes;
+
+    if (RAF_ID) cancelAnimationFrame(RAF_ID);
+    if (animated) {
+        let steps=0;
+        function frame() {
+            simulate(GRAPH.nodes,GRAPH.links,W,H,3);
+            drawGraph(canvas,GRAPH.nodes,GRAPH.links,HIGHLIGHTED);
+            if (steps++<60) RAF_ID=requestAnimationFrame(frame);
+        }
+        frame();
+    } else {
+        drawGraph(canvas,GRAPH.nodes,GRAPH.links,HIGHLIGHTED);
+    }
+
+    buildLegend('map_legend');
+    document.getElementById('clear_map_btn').style.display = GRAPH.nodes.length>0?'':'none';
+    document.getElementById('reorganize_map_btn').style.display = GRAPH.nodes.length>0?'':'none';
+    document.getElementById('map_hint').textContent = GRAPH.nodes.length>0
+        ? `${GRAPH.nodes.length} nó(s) · Toque em um nó para usar ferramentas`
+        : 'Execute uma ferramenta para começar · Toque em um nó para usar ferramentas';
+}
+
+function buildLegend(elId) {
+    const el=document.getElementById(elId);
+    if(!el) return;
+    el.innerHTML=Object.entries(T).filter(([k])=>k!=='root').map(([,v])=>
+        `<span style="display:inline-flex;align-items:center;gap:4px;color:${v.color};">
+            <span style="width:7px;height:7px;border-radius:50%;background:${v.color};"></span>${v.label}
+        </span>`
+    ).join('');
+}
+
+// ─── Interação com nós ────────────────────────────────────────────────────────
+function hitNode(cx,cy,canvas) {
+    const rect=canvas.getBoundingClientRect();
+    const sx=cx-rect.left, sy=cy-rect.top;
+    const {x,y} = screenToWorld(canvas, sx, sy);
+    for (const n of CANVAS_NODES) {
+        const r=(T[n.type]||T.info).r+14;
+        if ((n.x-x)**2+(n.y-y)**2<r*r) return n;
+    }
+    return null;
+}
+
+function bindCanvasEvents(canvas) {
+    let dragNode = null;       // nó sendo arrastado individualmente
+    let dragMoved = false;
+    let dragStartX = 0, dragStartY = 0;
+    let panning = false;       // arrastando o fundo (pan da câmera)
+    let panStartX = 0, panStartY = 0, panOrigOx = 0, panOrigOy = 0;
+    let pinchDist = null;      // distância inicial entre 2 dedos (zoom)
+    let pinchOrigScale = 1;
+    let pinchMidWorld = null;  // ponto do mundo sob o centro da pinça (mantém o zoom centrado)
+
+    function localPos(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function clampScale(s) { return Math.max(0.25, Math.min(3, s)); }
+
+    // ── Mouse: drag de nó ──
+    canvas.onmousedown = e => {
+        const n = hitNode(e.clientX, e.clientY, canvas);
+        if (n && n.type !== 'root') {
+            dragNode = n;
+            dragMoved = false;
+            dragStartX = e.clientX; dragStartY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        } else {
+            // Começa a arrastar o fundo (pan)
+            panning = true;
+            const v = getView(canvas);
+            panStartX = e.clientX; panStartY = e.clientY;
+            panOrigOx = v.ox; panOrigOy = v.oy;
+            canvas.style.cursor = 'move';
+        }
+    };
+    canvas.onmousemove = e => {
+        if (dragNode) {
+            if (Math.abs(e.clientX - dragStartX) > 3 || Math.abs(e.clientY - dragStartY) > 3) dragMoved = true;
+            const p = localPos(e.clientX, e.clientY);
+            const w = screenToWorld(canvas, p.x, p.y);
+            dragNode.x = w.x; dragNode.y = w.y;
+            dragNode.vx = 0; dragNode.vy = 0;
+            drawGraph(canvas, GRAPH.nodes, GRAPH.links, HIGHLIGHTED);
+        } else if (panning) {
+            const v = getView(canvas);
+            v.ox = panOrigOx + (e.clientX - panStartX);
+            v.oy = panOrigOy + (e.clientY - panStartY);
+            drawGraph(canvas, CANVAS_NODES, GRAPH.links, HIGHLIGHTED);
+        }
+    };
+    function endDrag() {
+        if (dragNode) { if (dragMoved) dragNode.pinned = true; saveGraph(GRAPH); }
+        dragNode = null;
+        panning = false;
+        canvas.style.cursor = 'crosshair';
+    }
+    canvas.onmouseup = endDrag;
+    canvas.onmouseleave = endDrag;
+
+    canvas.onclick = e => {
+        if (dragMoved) { dragMoved = false; return; } // foi um arraste, não um clique
+        const n = hitNode(e.clientX, e.clientY, canvas);
+        if (!n || n.type === 'root') return;
+        openNodePanel(n);
+    };
+
+    // ── Roda do mouse: zoom (desktop) ──
+    canvas.onwheel = e => {
+        e.preventDefault();
+        const v = getView(canvas);
+        const rect = canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+        const worldBefore = screenToWorld(canvas, sx, sy);
+        v.scale = clampScale(v.scale * (e.deltaY < 0 ? 1.1 : 0.9));
+        // Mantém o ponto sob o cursor fixo ao dar zoom
+        v.ox = sx - worldBefore.x * v.scale;
+        v.oy = sy - worldBefore.y * v.scale;
+        drawGraph(canvas, CANVAS_NODES, GRAPH.links, HIGHLIGHTED);
+    };
+
+    // ── Toque: 1 dedo = drag de nó OU pan; 2 dedos = pinça (zoom) ──
+    canvas.ontouchstart = e => {
+        if (e.touches.length === 2) {
+            // Início de pinça: cancela qualquer drag de nó em andamento
+            dragNode = null; panning = false;
+            const t0 = e.touches[0], t1 = e.touches[1];
+            pinchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            const v = getView(canvas);
+            pinchOrigScale = v.scale;
+            const rect = canvas.getBoundingClientRect();
+            const midX = (t0.clientX + t1.clientX) / 2 - rect.left;
+            const midY = (t0.clientY + t1.clientY) / 2 - rect.top;
+            pinchMidWorld = screenToWorld(canvas, midX, midY);
+            e.preventDefault();
+            return;
+        }
+        if (!e.touches.length) return;
+        const t = e.touches[0];
+        const n = hitNode(t.clientX, t.clientY, canvas);
+        if (n && n.type !== 'root') {
+            dragNode = n;
+            dragMoved = false;
+            dragStartX = t.clientX; dragStartY = t.clientY;
+        } else {
+            panning = true;
+            const v = getView(canvas);
+            panStartX = t.clientX; panStartY = t.clientY;
+            panOrigOx = v.ox; panOrigOy = v.oy;
+        }
+        e.preventDefault();
+    };
+    canvas.ontouchmove = e => {
+        if (e.touches.length === 2 && pinchDist !== null) {
+            const t0 = e.touches[0], t1 = e.touches[1];
+            const newDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            const v = getView(canvas);
+            v.scale = clampScale(pinchOrigScale * (newDist / pinchDist));
+            const rect = canvas.getBoundingClientRect();
+            const midX = (t0.clientX + t1.clientX) / 2 - rect.left;
+            const midY = (t0.clientY + t1.clientY) / 2 - rect.top;
+            // Mantém o ponto do mundo sob o centro da pinça fixo
+            v.ox = midX - pinchMidWorld.x * v.scale;
+            v.oy = midY - pinchMidWorld.y * v.scale;
+            drawGraph(canvas, CANVAS_NODES, GRAPH.links, HIGHLIGHTED);
+            e.preventDefault();
+            return;
+        }
+        if (!e.touches.length) return;
+        const t = e.touches[0];
+        if (dragNode) {
+            if (Math.abs(t.clientX - dragStartX) > 3 || Math.abs(t.clientY - dragStartY) > 3) dragMoved = true;
+            const p = localPos(t.clientX, t.clientY);
+            const w = screenToWorld(canvas, p.x, p.y);
+            dragNode.x = w.x; dragNode.y = w.y;
+            dragNode.vx = 0; dragNode.vy = 0;
+            drawGraph(canvas, GRAPH.nodes, GRAPH.links, HIGHLIGHTED);
+        } else if (panning) {
+            const v = getView(canvas);
+            v.ox = panOrigOx + (t.clientX - panStartX);
+            v.oy = panOrigOy + (t.clientY - panStartY);
+            drawGraph(canvas, CANVAS_NODES, GRAPH.links, HIGHLIGHTED);
+        }
+        e.preventDefault();
+    };
+    canvas.ontouchend = e => {
+        if (e.touches.length < 2) pinchDist = null;
+        if (dragNode) {
+            if (!dragMoved) {
+                // foi um toque rápido, não um arraste: abre o painel
+                const n = dragNode;
+                dragNode = null;
+                if (n && n.type !== 'root') openNodePanel(n);
+                return;
+            }
+            dragNode.pinned = true;
+            saveGraph(GRAPH);
+        }
+        dragNode = null;
+        dragMoved = false;
+        panning = false;
+    };
+}
+
+// ─── Painel do nó ────────────────────────────────────────────────────────────
+let ACTIVE_NODE = null;
+
+function openNodePanel(n) {
+    ACTIVE_NODE = n;
+    HIGHLIGHTED = n.id;
+    renderMap();
+
+    document.getElementById('np_type').textContent   = (T[n.type]||T.info).label.toUpperCase();
+    document.getElementById('np_value').textContent  = n.val||n.label;
+    document.getElementById('np_cmd').value          = '';
+
+    const tools = TOOLS_BY_TYPE[n.type] || [];
+    const cont  = document.getElementById('np_tools');
+    cont.innerHTML = tools.map(t => {
+        const installed = INSTALLED.has(t.name);
+        return `<button class="np-tool-btn ${installed?'installed':'missing'}"
+            onclick="runFromNode('${t.name}',${JSON.stringify(t.args(n.val||n.label))},${installed})"
+            type="button">
+            <span>${t.name}</span>
+            <span class="status-tag">${installed?'✓ instalado':'+ instalar'}</span>
+        </button>`;
+    }).join('') || '<span style="color:var(--text-dim);font-size:0.82rem;">Nenhuma ferramenta sugerida</span>';
+
+    // Preenche o campo de comando com uma sugestão padrão
+    if (tools.length>0) {
+        const first=tools[0];
+        document.getElementById('np_cmd').value=`${first.name} ${first.args(n.val||n.label)}`;
+    }
+
+    // Mostra o histórico de output bruto vinculado a este nó (se houver)
+    const rawBox = document.getElementById('np_raw_history');
+    if (n.rawHistory && n.rawHistory.length) {
+        rawBox.style.display = 'block';
+        const title = '<p style="margin:0 0 8px;font-size:0.78rem;color:var(--text-dim);">Histórico de execuções (output bruto) deste nó:</p>';
+        const items = n.rawHistory.slice().reverse().map(h => {
+            const date = new Date(h.ts).toLocaleString('pt-BR');
+            return `<details style="margin-bottom:8px;">
+                <summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--text-muted);">
+                    ${h.tool} ${h.args||''} <span style="opacity:.6;">— ${date}</span>
+                </summary>
+                <pre style="white-space:pre-wrap;font-size:0.72rem;background:var(--bg);padding:10px;border-radius:8px;margin-top:6px;max-height:240px;overflow-y:auto;border:1px solid var(--border);">${h.output.replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>
+            </details>`;
+        }).join('');
+        rawBox.innerHTML = title + items;
+    } else {
+        rawBox.style.display = 'none';
+        rawBox.innerHTML = '';
+    }
+
+    document.getElementById('node_backdrop').style.display='block';
+    document.getElementById('node_panel').style.display='block';
+}
+
+function closeNodePanel() {
+    document.getElementById('node_panel').style.display='none';
+    document.getElementById('node_backdrop').style.display='none';
+    HIGHLIGHTED=null;
+    renderMap();
+}
+
+async function runFromNode(toolName, args, installed) {
+    closeNodePanel();
+    if (!installed) {
+        if (!confirm(`${toolName} não está instalado. Deseja instalar agora?`)) return;
+        // Instala pelo método padrão (pkg)
+        await secureFetch('/install_tool',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:`tool_name=${encodeURIComponent(toolName)}&pkg_name=${encodeURIComponent(toolName)}&method=pkg`});
+    }
+    executeWithParent(toolName, args, ACTIVE_NODE);
+}
+
+function runFromNodePanel() {
+    const full=document.getElementById('np_cmd').value.trim();
+    if (!full) return;
+    closeNodePanel();
+    const parts=full.split(' ');
+    executeWithParent(parts[0], parts.slice(1).join(' '), ACTIVE_NODE);
+}
+
+function runFromButton(toolName) {
+    const args=prompt(`Argumentos para ${toolName}:`);
+    if (args===null) return;
+    executeWithParent(toolName, args, null);
+}
+
+// ─── Execução + expansão do mapa ─────────────────────────────────────────────
+async function executeWithParent(toolName, args, parentNode) {
+    const btn=document.getElementById('run_btn');
+    const out=document.getElementById('command_output');
+    btn.textContent='Executando…'; btn.disabled=true;
+    out.textContent=`Executando ${toolName} ${args}…`; out.style.display='block';
+    document.getElementById('terminal_section').scrollIntoView({behavior:'smooth',block:'nearest'});
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 125000); // 125s (um pouco acima do timeout do backend)
+
+        const r=await secureFetch('/execute_tool',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:`tool_name=${encodeURIComponent(toolName)}&command_args=${encodeURIComponent(args)}`,
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const data=await r.json();
+        const rawText=`[${data.status}]\n\n${data.output}`;
+        out.textContent=rawText;
+
+        // Determina o nó raiz desta execução
+        let rootId, rootLabel, rootNode;
+        if (parentNode) {
+            // Expande a partir do nó clicado
+            rootId    = parentNode.id;
+            rootLabel = parentNode.val||parentNode.label;
+            rootNode  = parentNode;
+        } else {
+            // Nova raiz: o alvo do comando
+            const target=(args||toolName).trim().split(/\s+/).pop();
+            rootId    = 'root_'+toolName+'_'+Date.now();
+            rootLabel = target;
+            rootNode  = GRAPH.nodes.find(n=>n.id===rootId);
+            if (!rootNode) {
+                rootNode = {id:rootId,label:target.slice(0,20),type:'root',val:target,x:undefined,y:undefined,vx:0,vy:0};
+                GRAPH.nodes.push(rootNode);
+            }
+        }
+
+        // Guarda o output bruto desta execução vinculado ao nó (histórico por nó)
+        if (rootNode) {
+            if (!rootNode.rawHistory) rootNode.rawHistory = [];
+            rootNode.rawHistory.push({ tool: toolName, args, output: rawText, ts: Date.now() });
+        }
+
+        // Parseia e adiciona novos nós
+        const {newNodes,newLinks}=parseOutput(rawText,rootId,rootLabel);
+        GRAPH.nodes.push(...newNodes);
+        GRAPH.links.push(...newLinks);
+        saveGraph(GRAPH);
+
+        requestAnimationFrame(()=>{
+            renderMap(true);
+        });
+
+    } catch(e) {
+        if (e.name === 'AbortError') {
+            out.textContent = 'Erro: tempo limite excedido. O comando demorou demais para responder.';
+        } else {
+            out.textContent='Erro: '+e;
+        }
+    }
+
+    btn.textContent='Executar'; btn.disabled=false;
+}
+
+function executeCustomCommand() {
+    const full=document.getElementById('custom_command').value.trim();
+    if (!full){alert('Digite um comando.');return;}
+    const parts=full.split(' ');
+    executeWithParent(parts[0], parts.slice(1).join(' '), null);
+}
+
+function clearMap() {
+    if (!confirm('Limpar todo o mapa desta categoria?')) return;
+    GRAPH={nodes:[],links:[]};
+    saveGraph(GRAPH);
+    renderMap();
+}
+
+function reorganizeMap() {
+    // Solta todos os nós fixados manualmente e deixa a física reorganizar tudo
+    GRAPH.nodes.forEach(n => { n.pinned = false; n.x = undefined; n.y = undefined; });
+    saveGraph(GRAPH);
+    resetView('mindmap');
+    renderMap(true);
+}
+
+function zoomMap(canvasId, factor) {
+    const canvas = document.getElementById(canvasId);
+    const v = getView(canvas);
+    const cx = canvas.offsetWidth/2, cy = canvas.offsetHeight/2;
+    const worldBefore = screenToWorld(canvas, cx, cy);
+    v.scale = Math.max(0.25, Math.min(3, v.scale * factor));
+    v.ox = cx - worldBefore.x * v.scale;
+    v.oy = cy - worldBefore.y * v.scale;
+    drawGraph(canvas, GRAPH.nodes, GRAPH.links, HIGHLIGHTED);
+}
+
+function resetView(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    VIEW_STATE.set(canvas, {ox:0, oy:0, scale:1});
+    drawGraph(canvas, GRAPH.nodes, GRAPH.links, HIGHLIGHTED);
+}
+
+// ─── Fullscreen ───────────────────────────────────────────────────────────────
+function openFullscreen() {
+    const ov=document.getElementById('fs_overlay');
+    ov.style.display='flex';
+    document.body.style.overflow='hidden';
+    if (ov.requestFullscreen) ov.requestFullscreen().catch(()=>{});
+
+    const canvas=document.getElementById('mindmap_fs');
+    const W=window.innerWidth, H=window.innerHeight-80;
+    canvas.style.height=H+'px';
+    // Usa os nós reais (mesmas posições/pinned do mapa principal), não uma cópia
+    simulate(GRAPH.nodes,GRAPH.links,W,H,GRAPH.nodes.some(n=>n.pinned)?0:60);
+    drawGraph(canvas,GRAPH.nodes,GRAPH.links,HIGHLIGHTED);
+    buildLegend('map_legend_fs');
+
+    CANVAS_NODES = GRAPH.nodes;
+    bindCanvasEvents(canvas);
+}
+function closeFullscreen() {
+    document.getElementById('fs_overlay').style.display='none';
+    document.body.style.overflow='';
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    renderMap(); // sincroniza o mapa principal com eventuais arrastes feitos em tela cheia
+}
+
+// ─── Install tool ─────────────────────────────────────────────────────────────
+function installTool(toolName,pkgName,method) {
+    if(!confirm(`Instalar ${toolName}?`)) return;
+    secureFetch('/install_tool',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:`tool_name=${encodeURIComponent(toolName)}&pkg_name=${encodeURIComponent(pkgName)}&method=${encodeURIComponent(method)}`})
+    .then(r=>r.json()).then(d=>{alert(`[${d.status}] ${d.output.slice(0,120)}`);location.reload();})
+    .catch(e=>alert('Erro: '+e));
+}
+
+// ─── Modal adicionar ferramenta ───────────────────────────────────────────────
+let selectedMethod='git';
+function openAddModal(){document.getElementById('add_modal').style.display='flex';document.getElementById('add_name').focus();selectMethod('git');}
+function closeAddModal(){document.getElementById('add_modal').style.display='none';}
+function selectMethod(m){selectedMethod=m;document.querySelectorAll('.pill-method').forEach(el=>el.classList.toggle('active',el.dataset.m===m));}
+function autoDetectMethod(){
+    const v=document.getElementById('add_pkg').value.trim();
+    if(v.startsWith('http')&&v.includes('github')) selectMethod('git');
+    else if(v.includes('go.')||v.endsWith('/...')) selectMethod('go');
+    else if(v.startsWith('http')) selectMethod('git');
+    else selectMethod('pkg');
+    const n=document.getElementById('add_name');
+    if(!n.value&&v){const p=v.replace(/\/$/,'').split(/[\/\s]+/);n.value=p[p.length-1].replace(/[^a-zA-Z0-9_\-]/g,'').toLowerCase();}
+}
+function submitAddTool(){
+    const name=document.getElementById('add_name').value.trim();
+    const pkg=document.getElementById('add_pkg').value.trim();
+    const installNow=document.getElementById('install_now').checked;
+    const out=document.getElementById('add_output');
+    const btn=document.getElementById('add_btn');
+    if(!name||!pkg){alert('Preencha todos os campos.');return;}
+    btn.textContent=installNow?'Instalando…':'Adicionando…';btn.disabled=true;
+    out.style.display='block';out.textContent='…';
+    const cat=window.location.pathname.split('/').pop();
+    fetch('/add_tool',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:[`tool_name=${encodeURIComponent(name)}`,`pkg=${encodeURIComponent(pkg)}`,
+              `method=${encodeURIComponent(selectedMethod)}`,`category=${encodeURIComponent(cat)}`,
+              `install_now=${installNow}`].join('&')})
+    .then(r=>r.json()).then(d=>{out.textContent=`[${d.status}] ${d.output}`;btn.textContent='Adicionar';btn.disabled=false;
+        if(d.status==='success') setTimeout(()=>{closeAddModal();location.reload();},1400);})
+    .catch(e=>{out.textContent='Erro: '+e;btn.textContent='Adicionar';btn.disabled=false;});
+}
+document.getElementById('add_modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAddModal();});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+    const canvas=document.getElementById('mindmap');
+    const W=canvas.parentElement.clientWidth||window.innerWidth;
+    const H=Math.max(380,Math.min(560,Math.round(W*.82)));
+    canvas.style.height=H+'px';
+    bindCanvasEvents(canvas);
+    renderMap(GRAPH.nodes.length>0);
+});
+</script>
+{% endblock %}
