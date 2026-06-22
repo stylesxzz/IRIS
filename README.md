@@ -55,22 +55,24 @@ O **Agente IRIS** (integrado via Hermes + modelo de IA configurável) atua como 
 
 ## 📸 Screenshots
 
-| Login | Menu | Mapa Mental |
-|-------|------|-------------|
-| 
+**Login**
+
 
 ![Login](Screenshot_20260620_030210_Chrome.jpg)
 
- | 
+
+
+**Menu**
+
 
 ![Menu](Screenshot_20260615_225725_Samsung%20Browser.jpg)
 
- | 
+
+
+**Mapa Mental**
+
 
 ![Mapa](Screenshot_20260621_121310_Chrome.jpg)
-
- |
- |
 ---
 
 ## 🛠️ Instalação
